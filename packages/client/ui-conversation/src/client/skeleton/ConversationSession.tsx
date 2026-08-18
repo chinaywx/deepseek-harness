@@ -35,6 +35,14 @@ function resolveActiveView(tabs: readonly ViewTab[], selectedId: string | null):
     ?? tabs.find(view => view.id === DEFAULT_VIEW_ID)
 }
 
+/** Resolve the main (center-column) view. Studio views live in the details panel. */
+function resolveActiveMainView(tabs: readonly ViewTab[], selectedId: string | null): ViewTab | undefined {
+  const mainTabs = tabs.filter(viewTab => !isStudioView(viewTab))
+  const active = resolveActiveView(tabs, selectedId)
+  if (active !== undefined && !isStudioView(active)) return active
+  return mainTabs.find(viewTab => viewTab.id === DEFAULT_VIEW_ID) ?? mainTabs.at(0)
+}
+
 function deriveAncestry(list: SessionListState, id: SessionId): readonly Breadcrumb[] {
   const chain: Breadcrumb[] = []
   const seen = new Set<SessionId>()
@@ -71,13 +79,9 @@ export function ConversationSessionHeader({
   useSyncExternalStore(views.subscribe, views.version)
   const tabs = views.list()
   const mainTabs = tabs.filter(viewTab => !isStudioView(viewTab))
-  const studioTabs = tabs.filter(isStudioView)
   const selectedId = useStore(s => s.view)
-  const active = resolveActiveView(tabs, selectedId)
-  const activeMainId = active !== undefined && isStudioView(active)
-    ? (mainTabs.find(viewTab => viewTab.id === DEFAULT_VIEW_ID)?.id ?? mainTabs.at(0)?.id)
-    : active?.id
-  const activeStudio = active !== undefined && isStudioView(active) ? active : undefined
+  const activeMain = resolveActiveMainView(tabs, selectedId)
+  const activeMainId = activeMain?.id
   const ancestry = useSessions(s => deriveAncestry(s, sessionId), equalBreadcrumbs)
   const composerPhase = useSession(s => s.composerPhase)
   const blank = useSession(s => s.blank)
@@ -119,38 +123,20 @@ export function ConversationSessionHeader({
               {renderSlot('conversation.session.header.utilities', {})}
             </div>
           </div>
-          {(mainTabs.length > 1 || studioTabs.length > 0) && (
+          {mainTabs.length > 1 && (
             <div className={css.tabs} role="tablist">
-              <div className={css.mainTabs}>
-                {mainTabs.map(viewTab => (
-                  <button
-                    key={viewTab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={viewTab.id === activeMainId}
-                    className={clsx(css.tab, viewTab.id === activeMainId && css.tabActive)}
-                    onClick={() => { actions.setView(viewTab.id) }}
-                  >
-                    {viewTab.label}
-                  </button>
-                ))}
-              </div>
-              {studioTabs.length > 0 && (
-                <div className={css.studioTabs}>
-                  {studioTabs.map(viewTab => (
-                    <button
-                      key={viewTab.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={viewTab.id === activeStudio?.id}
-                      className={clsx(css.tab, viewTab.id === activeStudio?.id && css.tabActive)}
-                      onClick={() => { actions.setView(viewTab.id) }}
-                    >
-                      {viewTab.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {mainTabs.map(viewTab => (
+                <button
+                  key={viewTab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={viewTab.id === activeMainId}
+                  className={clsx(css.tab, viewTab.id === activeMainId && css.tabActive)}
+                  onClick={() => { actions.setView(viewTab.id) }}
+                >
+                  {viewTab.label}
+                </button>
+              ))}
             </div>
           )}
         </>
@@ -171,13 +157,9 @@ export function ConversationSession({
 }: ConversationSessionProps) {
   useSyncExternalStore(views.subscribe, views.version)
   const tabs = views.list()
-  const mainTabs = tabs.filter(viewTab => !isStudioView(viewTab))
   const selectedId = useStore(s => s.view)
-  const active = resolveActiveView(tabs, selectedId)
-  const activeMainId = active !== undefined && isStudioView(active)
-    ? (mainTabs.find(viewTab => viewTab.id === DEFAULT_VIEW_ID)?.id ?? mainTabs.at(0)?.id)
-    : active?.id
-  const activeStudio = active !== undefined && isStudioView(active) ? active : undefined
+  const activeMain = resolveActiveMainView(tabs, selectedId)
+  const activeMainId = activeMain?.id
   const composerPhase = useSession(s => s.composerPhase)
   const blank = useSession(s => s.blank)
   const inputState = useInput(s => s)
@@ -198,20 +180,12 @@ export function ConversationSession({
   }, [releaseSessionImages, sessionId])
 
   if (blank && composerPhase === 'blank') return null
-  const viewProps = {
-    inspect,
-    onInspectDone: () => { actions.setInspect(null) },
-  }
   return (
-    <div className={clsx(css.viewArea, activeStudio !== undefined && css.viewAreaSplit)}>
-      <div className={css.mainView}>
-        {activeMainId !== undefined && renderSlot('conversation.view', viewProps, { only: activeMainId })}
-      </div>
-      {activeStudio !== undefined && (
-        <div className={css.studioPanel}>
-          {renderSlot('conversation.view', viewProps, { only: activeStudio.id })}
-        </div>
-      )}
+    <div className={css.viewArea}>
+      {activeMainId !== undefined && renderSlot('conversation.view', {
+        inspect,
+        onInspectDone: () => { actions.setInspect(null) },
+      }, { only: activeMainId })}
     </div>
   )
 }

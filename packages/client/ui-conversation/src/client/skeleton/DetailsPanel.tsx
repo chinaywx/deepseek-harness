@@ -1,21 +1,27 @@
-// DetailsPanel: close button + the selected call's args and
-// result — args as JSON, the result raw except for a terminal-card call, whose
-// Output section is the command's terminal card. Reads the
-// selection from the shared chat
-// store (conversation writes, this panel reads — the cross-registration
-// share the store seat exists for) and derives the call material from the
-// session snapshot — no data of its own.
+// DetailsPanel: right-column content that shows either the selected tool call
+// details or studio views (Design/PPT). Studio views are selected through the
+// shared chat store's active view id and rendered from the `details.studio`
+// slot; the panel keeps its own refresh key so a refresh button can remount the
+// active studio iframe.
 
-import { Fragment } from 'react'
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { CodeBlock } from '@deepseek-ai/dsh-client-ui-primitives'
 import { shallowEqual } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ConversationSnapshot, RunningToolCall, ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-runtime/client'
 import type { DetailsSlotProps } from '../contract/slots.ts'
+import type { ViewTab } from '../contract/views.ts'
 import { findToolCall } from '../chat/tool-node-reader.ts'
 import css from './DetailsPanel.module.css'
 
 /** Full props composed by reference from the contract (automatic shares & injected share). */
 export type DetailsPanelProps = DetailsSlotProps
+
+const STUDIO_VIEW_SUFFIX = '-studio'
+
+/** Studio views are rendered in the details panel instead of the main tab ring. */
+function isStudioView(viewTab: ViewTab): boolean {
+  return viewTab.id.endsWith(STUDIO_VIEW_SUFFIX)
+}
 
 /**
  * Selected call material: the call's display name and args plus the frozen
@@ -63,7 +69,34 @@ function rawResultText(block: ToolCallBlock): string {
   return parts.join('\n')
 }
 
-export function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }: DetailsPanelProps) {
+export function DetailsPanel({
+  useSession, useSessions, sessionId, useStore, actions, renderSlot,
+  openDetails, closeDetails, views, t,
+}: DetailsSlotProps) {
+  useSyncExternalStore(views.subscribe, views.version)
+  const studioTabs = views.list().filter(isStudioView)
+  const selectedId = useStore(s => s.view)
+  const activeStudio = studioTabs.find(viewTab => viewTab.id === selectedId)
+  const hasStudio = studioTabs.length > 0
+
+  // Open the details panel once when studio views first appear, and keep the
+  // first studio selected by default so the tab bar is never inert.
+  const openedOnce = useRef(false)
+  useEffect(() => {
+    if (!hasStudio) {
+      openedOnce.current = false
+      return
+    }
+    if (activeStudio === undefined) {
+      const first = studioTabs[0]
+      if (first !== undefined) actions.setView(first.id)
+    }
+    if (!openedOnce.current) {
+      openedOnce.current = true
+      openDetails()
+    }
+  }, [hasStudio, activeStudio, actions, openDetails, studioTabs])
+
   const selection = useStore(s => s.selection)
   // Session workspace root: an omitted or relative terminal cwd resolves
   // against it, which the pure presenter cannot see.
@@ -75,54 +108,103 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useStore, ren
     s => (callId === undefined ? null : materialFor(s, callId)),
     (a, b) => shallowEqual(a, b))
 
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const showStudio = activeStudio !== undefined
+
   return (
     <div className={css.root}>
       <div className={css.header}>
-        <div className={css.title}>
-          {selection === null ? t('details.title') : material?.name ?? selection.toolName ?? t('details.title')}
+        {hasStudio ? (
+          <div className={css.tabs} role="tablist">
+            {studioTabs.map(viewTab => (
+              <button
+                key={viewTab.id}
+                type="button"
+                role="tab"
+                aria-selected={viewTab.id === activeStudio?.id}
+                className={css.tab}
+                data-active={viewTab.id === activeStudio?.id || undefined}
+                onClick={() => { actions.setView(viewTab.id) }}
+              >
+                {viewTab.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className={css.title}>
+            {selection === null ? t('details.title') : material?.name ?? selection.toolName ?? t('details.title')}
+          </div>
+        )}
+        <div className={css.headerActions}>
+          {showStudio && (
+            <button
+              type="button"
+              className={css.refresh}
+              aria-label={t('details.refresh')}
+              onClick={() => { setRefreshKey(k => k + 1) }}
+            >
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+                <path
+                  d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 4.5V8h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button" className={css.close} aria-label={t('details.close')}
+            onClick={() => { closeDetails() }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
-        <button
-          type="button" className={css.close} aria-label={t('details.close')}
-          onClick={() => { closeDetails() }}
-        >
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
-            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        </button>
       </div>
       <div className={css.body}>
-        {selection === null || callId === undefined
-          ? <div className={css.empty}>{t('details.empty')}</div>
-          : material === null
-            ? <div className={css.empty}>{t('details.notInWindow')}</div>
-            : (
-              <>
-                {material.argsRaw !== null && (
+        {showStudio
+          ? (
+            <div key={refreshKey} className={css.studioBody}>
+              {renderSlot('details.studio', {}, { only: activeStudio.id })}
+            </div>
+          )
+          : selection === null || callId === undefined
+            ? <div className={css.empty}>{t('details.empty')}</div>
+            : material === null
+              ? <div className={css.empty}>{t('details.notInWindow')}</div>
+              : (
+                <>
+                  {material.argsRaw !== null && (
+                    <section className={css.section}>
+                      <div className={css.sectionLabel}>{t('details.input')}</div>
+                      <CodeBlock code={pretty(material.argsRaw)} lang="json" copyLabel={t('copy')} copiedLabel={t('copied')} />
+                    </section>
+                  )}
                   <section className={css.section}>
-                    <div className={css.sectionLabel}>{t('details.input')}</div>
-                    <CodeBlock code={pretty(material.argsRaw)} lang="json" copyLabel={t('copy')} copiedLabel={t('copied')} />
+                    <div className={css.sectionLabel}>{t('details.output')}</div>
+                    {/* Keyed by the selected call: the body owns per-call view
+                        state (the terminal card's expand and copy), which React
+                        would otherwise carry into the next selection because the
+                        panel does not unmount between calls. */}
+                    <Fragment key={callId}>
+                      {renderSlot('conversation.details.tool', { block: material.block, cwd: sessionCwd }, {
+                        fallback: 'kind' in material.block
+                          ? (
+                            <pre className={css.code} data-error={material.block.isError || undefined}>
+                              {rawResultText(material.block)}
+                            </pre>
+                          )
+                          : <div className={css.empty}>{t('details.running')}</div>,
+                      })}
+                    </Fragment>
                   </section>
-                )}
-                <section className={css.section}>
-                  <div className={css.sectionLabel}>{t('details.output')}</div>
-                  {/* Keyed by the selected call: the body owns per-call view
-                      state (the terminal card's expand and copy), which React
-                      would otherwise carry into the next selection because the
-                      panel does not unmount between calls. */}
-                  <Fragment key={callId}>
-                    {renderSlot('conversation.details.tool', { block: material.block, cwd: sessionCwd }, {
-                      fallback: 'kind' in material.block
-                        ? (
-                          <pre className={css.code} data-error={material.block.isError || undefined}>
-                            {rawResultText(material.block)}
-                          </pre>
-                        )
-                        : <div className={css.empty}>{t('details.running')}</div>,
-                    })}
-                  </Fragment>
-                </section>
-              </>
-            )}
+                </>
+              )}
       </div>
     </div>
   )
