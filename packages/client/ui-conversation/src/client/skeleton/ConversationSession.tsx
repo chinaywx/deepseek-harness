@@ -21,6 +21,12 @@ interface Breadcrumb {
 }
 
 const DEFAULT_VIEW_ID = 'chat'
+const STUDIO_VIEW_SUFFIX = '-studio'
+
+/** Studio views are rendered in a side panel alongside chat; they are hidden from the main tab row. */
+function isStudioView(viewTab: ViewTab): boolean {
+  return viewTab.id.endsWith(STUDIO_VIEW_SUFFIX)
+}
 
 /** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
 function resolveActiveView(tabs: readonly ViewTab[], selectedId: string | null): ViewTab | undefined {
@@ -64,8 +70,14 @@ export function ConversationSessionHeader({
 }: ConversationSessionHeaderProps) {
   useSyncExternalStore(views.subscribe, views.version)
   const tabs = views.list()
+  const mainTabs = tabs.filter(viewTab => !isStudioView(viewTab))
+  const studioTabs = tabs.filter(isStudioView)
   const selectedId = useStore(s => s.view)
   const active = resolveActiveView(tabs, selectedId)
+  const activeMainId = active !== undefined && isStudioView(active)
+    ? (mainTabs.find(viewTab => viewTab.id === DEFAULT_VIEW_ID)?.id ?? mainTabs.at(0)?.id)
+    : active?.id
+  const activeStudio = active !== undefined && isStudioView(active) ? active : undefined
   const ancestry = useSessions(s => deriveAncestry(s, sessionId), equalBreadcrumbs)
   const composerPhase = useSession(s => s.composerPhase)
   const blank = useSession(s => s.blank)
@@ -107,20 +119,38 @@ export function ConversationSessionHeader({
               {renderSlot('conversation.session.header.utilities', {})}
             </div>
           </div>
-          {tabs.length > 1 && (
+          {(mainTabs.length > 1 || studioTabs.length > 0) && (
             <div className={css.tabs} role="tablist">
-              {tabs.map(viewTab => (
-                <button
-                  key={viewTab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={viewTab.id === active?.id}
-                  className={clsx(css.tab, viewTab.id === active?.id && css.tabActive)}
-                  onClick={() => { actions.setView(viewTab.id) }}
-                >
-                  {viewTab.label}
-                </button>
-              ))}
+              <div className={css.mainTabs}>
+                {mainTabs.map(viewTab => (
+                  <button
+                    key={viewTab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={viewTab.id === activeMainId}
+                    className={clsx(css.tab, viewTab.id === activeMainId && css.tabActive)}
+                    onClick={() => { actions.setView(viewTab.id) }}
+                  >
+                    {viewTab.label}
+                  </button>
+                ))}
+              </div>
+              {studioTabs.length > 0 && (
+                <div className={css.studioTabs}>
+                  {studioTabs.map(viewTab => (
+                    <button
+                      key={viewTab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={viewTab.id === activeStudio?.id}
+                      className={clsx(css.tab, viewTab.id === activeStudio?.id && css.tabActive)}
+                      onClick={() => { actions.setView(viewTab.id) }}
+                    >
+                      {viewTab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>
@@ -141,8 +171,13 @@ export function ConversationSession({
 }: ConversationSessionProps) {
   useSyncExternalStore(views.subscribe, views.version)
   const tabs = views.list()
+  const mainTabs = tabs.filter(viewTab => !isStudioView(viewTab))
   const selectedId = useStore(s => s.view)
   const active = resolveActiveView(tabs, selectedId)
+  const activeMainId = active !== undefined && isStudioView(active)
+    ? (mainTabs.find(viewTab => viewTab.id === DEFAULT_VIEW_ID)?.id ?? mainTabs.at(0)?.id)
+    : active?.id
+  const activeStudio = active !== undefined && isStudioView(active) ? active : undefined
   const composerPhase = useSession(s => s.composerPhase)
   const blank = useSession(s => s.blank)
   const inputState = useInput(s => s)
@@ -163,12 +198,20 @@ export function ConversationSession({
   }, [releaseSessionImages, sessionId])
 
   if (blank && composerPhase === 'blank') return null
+  const viewProps = {
+    inspect,
+    onInspectDone: () => { actions.setInspect(null) },
+  }
   return (
-    <div className={css.viewArea}>
-      {active !== undefined && renderSlot('conversation.view', {
-        inspect,
-        onInspectDone: () => { actions.setInspect(null) },
-      }, { only: active.id })}
+    <div className={clsx(css.viewArea, activeStudio !== undefined && css.viewAreaSplit)}>
+      <div className={css.mainView}>
+        {activeMainId !== undefined && renderSlot('conversation.view', viewProps, { only: activeMainId })}
+      </div>
+      {activeStudio !== undefined && (
+        <div className={css.studioPanel}>
+          {renderSlot('conversation.view', viewProps, { only: activeStudio.id })}
+        </div>
+      )}
     </div>
   )
 }

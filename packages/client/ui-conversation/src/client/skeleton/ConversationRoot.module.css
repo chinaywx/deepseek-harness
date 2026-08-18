@@ -137,9 +137,16 @@
   position: relative;
   z-index: 1;
   display: flex;
-  gap: 36px;
+  justify-content: space-between;
+  gap: 16px;
   margin-top: 4px;
   padding-left: 8px;
+}
+
+.mainTabs,
+.studioTabs {
+  display: flex;
+  gap: 36px;
 }
 
 /* figma .Tab 34:11442: 13/16 text (figma wt510, rendered 500), gap 8 to the 2px bar. */
@@ -182,6 +189,31 @@
   flex: 1;
   flex-direction: column;
   min-height: 0;
+}
+
+.viewAreaSplit {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.mainView {
+  flex: 3;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.studioPanel {
+  flex: 7;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100%;
+  border-left: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-base);
 }
 
 /* Composer context stack (Figma 9:937): standalone dock cards share one

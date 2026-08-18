@@ -18,7 +18,7 @@ export interface Columns { sidebar: number; center: number; details: number }
 
 // Contract-frozen geometry: the three-column concession chain's fixed points.
 /** Center column floor; only the final fallback may go below it. */
-export const CENTER_MIN = 640
+export const CENTER_MIN = 480
 /** Sidebar drag clamp floor. */
 export const SIDEBAR_MIN = 264
 /** Sidebar drag clamp ceiling. */
@@ -34,9 +34,9 @@ export const SIDEBAR_AUTO_COLLAPSE = 1024
 /** Details drag clamp floor. */
 export const DETAILS_MIN = 300
 /** Details drag clamp ceiling. */
-export const DETAILS_MAX = 520
+export const DETAILS_MAX = 2400
 /** Details width before any user drag. */
-export const DETAILS_DEFAULT = 360
+export const DETAILS_DEFAULT = 960
 
 /**
  * Clamp a panel width into its contract range.
