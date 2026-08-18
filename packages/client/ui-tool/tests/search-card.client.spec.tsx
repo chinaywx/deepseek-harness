@@ -389,11 +389,6 @@ describe('DetailsPanel Output section (search)', () => {
       items: [], archivedSessionIds: [], state: 'idle', phase: 'ready', error: null,
       baselinesReady: true, recentWorkspaceId: undefined,
     })
-    const emptyViews = {
-      list: () => [] as const,
-      subscribe: () => () => {},
-      version: () => 0,
-    }
     return render(
       <DetailsPanel
         SessionProvider={SessionProviderStub}
@@ -413,9 +408,7 @@ describe('DetailsPanel Output section (search)', () => {
         useProjection={(() => undefined)}
         useStore={bindSnapshotSelector(chat)}
         actions={chat.actions}
-        openDetails={vi.fn()}
         closeDetails={vi.fn()}
-        views={emptyViews}
         t={t}
       />,
     )

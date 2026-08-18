@@ -461,11 +461,6 @@ describe('DetailsPanel Output section', () => {
       items: [], archivedSessionIds: [], state: 'idle', phase: 'ready', error: null,
       baselinesReady: true, recentWorkspaceId: undefined,
     })
-    const emptyViews = {
-      list: () => [] as const,
-      subscribe: () => () => {},
-      version: () => 0,
-    }
     return render(
       <DetailsPanel
         SessionProvider={SessionProviderStub}
@@ -479,9 +474,7 @@ describe('DetailsPanel Output section', () => {
         useProjection={(() => undefined)}
         useStore={bindSnapshotSelector(chat)}
         actions={chat.actions}
-        openDetails={vi.fn()}
         closeDetails={vi.fn()}
-        views={emptyViews}
         t={t}
       />,
     )
@@ -646,11 +639,6 @@ describe('DetailsPanel Output section', () => {
     localStorage.clear()
     const chat = createChatStore().create()
     const closeDetails = vi.fn()
-    const emptyViews = {
-      list: () => [] as const,
-      subscribe: () => () => {},
-      version: () => 0,
-    }
     const snap = snapshot()
     const view = render(
       <DetailsPanel
@@ -672,9 +660,7 @@ describe('DetailsPanel Output section', () => {
         useProjection={(() => undefined)}
         useStore={bindSnapshotSelector(chat)}
         actions={chat.actions}
-        openDetails={vi.fn()}
         closeDetails={closeDetails}
-        views={emptyViews}
         t={t}
       />,
     )

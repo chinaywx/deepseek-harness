@@ -32,8 +32,8 @@ export type {
   ChatStore, ChatViewInjected, ChatViewSlotProps, CommandRowOwnerProps, CommandRowProps, ComposerBarInjected,
   ComposerAttachment, ComposerChainProps, ConversationInjected,
   ConversationSessionHeaderInjected, ConversationSessionInjected, ConversationSlotProps, ConvViewOwnerProps,
-  ConvViewProps, DetailsInjected, DetailsSlotProps, DetailsStudioOwnerProps, DetailsStudioViewProps,
-  DetailsToolOwnerProps, EmptyWorkspaceOwnerProps, TurnTailOwnerProps, UseChatNodeTurnData,
+  ConvViewProps, DetailsInjected, DetailsSlotProps, DetailsToolOwnerProps, EmptyWorkspaceOwnerProps,
+  TurnTailOwnerProps, UseChatNodeTurnData,
 } from './contract/slots.ts'
 // Export discipline: packages/client/AGENTS.md.
 

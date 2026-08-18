@@ -1,6 +1,6 @@
-/* Details third column, minimal fill: header (tabs + actions) over a
-   scrolling body of Input/Output code sections or a studio view. Panel
-   width/squeeze belongs to layout; this fills whatever the column gives. */
+/* Details third column, minimal fill: header (name + close) over a
+   scrolling body of Input/Output code sections. Panel width/squeeze belongs
+   to layout; this fills whatever the column gives. */
 
 .root {
   display: flex;
@@ -21,49 +21,6 @@
   border-bottom: 1px solid var(--dsw-alias-border-l2);
 }
 
-/* Studio tab bar: fills the header's leading edge and scrolls horizontally. */
-.tabs {
-  display: flex;
-  flex: 1;
-  gap: 4px;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.tab {
-  flex: none;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
-}
-
-.tab:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.tab[data-active] {
-  background: var(--dsw-alias-interactive-bg-selected);
-  color: var(--dsw-alias-label-primary);
-}
-
-.headerActions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 4px;
-}
-
 /* figma I54:42735;43:41479: 14/20 wt500. */
 .title {
   overflow: hidden;
@@ -75,8 +32,7 @@
   white-space: nowrap;
 }
 
-.close,
-.refresh {
+.close {
   display: grid;
   flex: none;
   place-items: center;
@@ -89,8 +45,7 @@
   cursor: pointer;
 }
 
-.close:hover,
-.refresh:hover {
+.close:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
@@ -99,12 +54,6 @@
   min-height: 0;
   padding: 12px 16px;
   overflow-y: auto;
-}
-
-.studioBody {
-  height: 100%;
-  padding: 0;
-  overflow: hidden;
 }
 
 .empty {

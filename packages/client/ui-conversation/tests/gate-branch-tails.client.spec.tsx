@@ -116,11 +116,6 @@ describe('render branch tails', () => {
       items: [], archivedSessionIds: [], state: 'idle', phase: 'ready', error: null,
       baselinesReady: true, recentWorkspaceId: undefined,
     })
-    const emptyViews = {
-      list: () => [] as const,
-      subscribe: () => () => {},
-      version: () => 0,
-    }
     const view = render(
       <DetailsPanel
         SessionProvider={SessionProviderStub}
@@ -140,9 +135,7 @@ describe('render branch tails', () => {
         }}
         useStore={bindSnapshotSelector(chat)}
         actions={chat.actions}
-        openDetails={vi.fn()}
         closeDetails={vi.fn()}
-        views={emptyViews}
         t={t}
       />,
     )
@@ -179,11 +172,6 @@ describe('render branch tails', () => {
       items: [], archivedSessionIds: [], state: 'idle', phase: 'ready', error: null,
       baselinesReady: true, recentWorkspaceId: undefined,
     })
-    const emptyViews = {
-      list: () => [] as const,
-      subscribe: () => () => {},
-      version: () => 0,
-    }
     const owners: DetailsToolOwnerProps[] = []
     const view = render(
       <DetailsPanel
@@ -204,9 +192,7 @@ describe('render branch tails', () => {
         }}
         useStore={bindSnapshotSelector(chat)}
         actions={chat.actions}
-        openDetails={vi.fn()}
         closeDetails={vi.fn()}
-        views={emptyViews}
         t={t}
       />,
     )

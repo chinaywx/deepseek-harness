@@ -446,13 +446,10 @@ export function apply(ctx: Context): void {
     locale: NS,
     children: {
       'conversation.details.tool': { kind: 'single', scope: 'session' },
-      'details.studio': { kind: 'list', scope: 'session' },
     },
     store: chatStore,
     inject: (): DetailsInjected => ({
-      openDetails: () => { layout.openDetails() },
       closeDetails: () => { layout.closeDetails() },
-      views,
     }),
   }, DetailsPanel)
 
