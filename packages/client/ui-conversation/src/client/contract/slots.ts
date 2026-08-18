@@ -112,6 +112,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       owner: AssistantActionOwnerProps
     }
     /**
+     * Studio panels rendered in the right details dock (Design, PPT, …).
+     * The dock chrome (tab bar, refresh, close) is owned by this package's
+     * `details` occupant; plugins only contribute panel views here, so a
+     * session with no studio plugin shows the dock's plain details state.
+     */
+    'details.studio': { kind: 'list'; scope: 'session'; owner: DetailsStudioOwnerProps }
+    /**
      * The body of the details panel for the tool call the user selected —
      * one occupant, so taking it means rendering every tool's output, not just
      * the ones you know. The owner passes a frozen `block` whose two lifecycle
@@ -405,6 +412,12 @@ export type CommandRowProps = PropsRuntime<'conversation.chat.commandview'>
  * readers (ui-trajectory) take this base alone.
  */
 export type ConvViewProps = PropsRuntime<'conversation.view'>
+
+/** Base props of a studio panel entry rendered in the details dock: the
+ * framework standard kit for the session-scope 'details.studio' slot plus the
+ * owner-passed refresh counter. Same session/input kit as `conversation.view`.
+ */
+export type DetailsStudioViewProps = PropsRuntime<'details.studio'>
 
 /** The shared chat store handle type declared by the Session header/body, details, and chat-view registrations. */
 export type ChatStore = ReturnType<typeof createChatStore>
@@ -712,18 +725,48 @@ export type ChatViewSlotProps =
   PropsRuntime<'conversation.view'> & PropsRenderSlots<'conversation.chat.node'>
   & PropsStore<ChatStore> & ChatViewInjected & PropsLocale<'conversation'>
 
-/**
- * Injected share of the details slot: the panel is otherwise a pure reader of
- * the shared chat store, but its close button is a layout orchestration call.
- */
-export interface DetailsInjected {
-  /** Close the details panel (layout geometry stays with ctx.layout). */
-  closeDetails: () => void
+/** Owner share of a studio panel entry in the details dock. */
+export interface DetailsStudioOwnerProps {
+  /** Bump to force the studio iframe to reload. */
+  refreshKey?: number
 }
 
-/** Full details-slot props: selection store, Tool output seat, injected close callback, and locale. */
-export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'conversation.details.tool'>
-  & PropsStore<ChatStore> & DetailsInjected & PropsLocale<'conversation'>
+/**
+ * Injected share of the details slot: the panel reads the shared chat store
+ * for the tool-call selection, while open/close are layout orchestration
+ * calls, the studio tab list mirrors the `details.studio` slot ledger, and
+ * the active studio panel is a per-session observable (writable from the
+ * composer command path, which has no store seat).
+ */
+export interface DetailsInjected {
+  /** Open the details panel (layout geometry stays with ctx.layout). */
+  openDetails: () => void
+  /** Close the details panel (layout geometry stays with ctx.layout). */
+  closeDetails: () => void
+  /** Studio panel tabs projected from the `details.studio` slot ledger. */
+  studioViews: {
+    list: () => readonly ViewTab[]
+    subscribe: (fn: () => void) => () => void
+    version: () => number
+  }
+  /** Select the active studio panel; null selects the built-in tool-details tab. */
+  setStudio: (id: string | null) => void
+  /** Registrant hooks compartment (bound to useStudio by the renderer). */
+  hooks: {
+    /** Active studio panel id for this session; null = the tool-details tab. */
+    studio: ObservableSnapshot<string | null>
+  }
+}
+
+/** Full details-slot props: selection store, Tool output seat, studio panel seat, injected share (hooks bound), and locale. */
+export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'conversation.details.tool' | 'details.studio'>
+  & PropsStore<ChatStore> & InjectFace<DetailsInjected> & PropsLocale<'conversation'>
+
+/** Injected share of the header details-dock toggle: a pure layout opener. */
+export interface DetailsToggleInjected {
+  /** Open the details panel (layout geometry stays with ctx.layout). */
+  openDetails: () => void
+}
 
 /** Owner share common to the hero / New-Session Workspace pickers. */
 export interface EmptyWorkspaceOwnerProps {

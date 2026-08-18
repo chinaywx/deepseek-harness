@@ -9,6 +9,13 @@ import { ToolDetails } from '../src/client/tool/ToolDetails.tsx'
 /** Framework session-area seat used by direct DetailsPanel tests. */
 export const SessionProviderStub: SessionProviderComponent = ({ children }) => children('s1' as SessionId)
 
+/** Empty studio-panel ledger for DetailsPanel hosts (no studio plugin composed). */
+export const emptyStudioViews: DetailsSlotProps['studioViews'] = {
+  list: () => [],
+  subscribe: () => () => {},
+  version: () => 0,
+}
+
 /** Build the canonical Chat slice consumed by Tool rows and details tests. */
 export function toolChatSnapshot(
   settled: readonly ConversationNode[] = [],

@@ -48,6 +48,13 @@ function renderToolDetailsProbe(owners?: DetailsToolOwnerProps[]): DetailsSlotPr
   }
 }
 
+/** Empty studio-panel ledger for DetailsPanel hosts (no studio plugin composed). */
+const emptyStudioViews: DetailsSlotProps['studioViews'] = {
+  list: () => [],
+  subscribe: () => () => {},
+  version: () => 0,
+}
+
 function snapshotBase(): ConversationSnapshot {
   return {
     sessionId: SID, views: EMPTY_CONVERSATION_VIEWS, chat: EMPTY_CHAT_SNAPSHOT,
@@ -136,6 +143,10 @@ describe('render branch tails', () => {
         useStore={bindSnapshotSelector(chat)}
         actions={chat.actions}
         closeDetails={vi.fn()}
+        openDetails={vi.fn()}
+        studioViews={emptyStudioViews}
+        setStudio={vi.fn()}
+        useStudio={selector => selector(null)}
         t={t}
       />,
     )
@@ -193,6 +204,10 @@ describe('render branch tails', () => {
         useStore={bindSnapshotSelector(chat)}
         actions={chat.actions}
         closeDetails={vi.fn()}
+        openDetails={vi.fn()}
+        studioViews={emptyStudioViews}
+        setStudio={vi.fn()}
+        useStudio={selector => selector(null)}
         t={t}
       />,
     )

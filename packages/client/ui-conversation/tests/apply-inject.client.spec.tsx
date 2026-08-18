@@ -336,17 +336,40 @@ describe('conversation slot inject API', () => {
 })
 
 describe('details inject API', () => {
-  it('details injects the one layout callback; selection rides the shared store instead', async () => {
+  it('details injects open/close, the studio ledger, and the per-session studio selection', async () => {
     const b = await bench()
     const entry = b.entryOf('details')
-    const injected = (entry.inject as unknown as () => DetailsInjected)()
-    expect(Object.keys(injected)).toEqual(['closeDetails'])
+    const injected = (entry.inject as unknown as (sessionId: SessionId) => DetailsInjected)(ROOT)
+    expect(Object.keys(injected)).toEqual(['openDetails', 'closeDetails', 'studioViews', 'setStudio', 'hooks'])
+    injected.openDetails()
+    expect(b.layoutFake.openDetails).toHaveBeenCalledTimes(1)
     injected.closeDetails()
     expect(b.layoutFake.closeDetails).toHaveBeenCalledTimes(1)
     // The shared handle: details resolves the SAME instance conversation writes.
     const conv = b.runtime.storeOf('conversation.session', ROOT)
     const details = b.runtime.storeOf('details', ROOT)
     expect(details).toBe(conv)
+    await b.runtime.dispose()
+  })
+
+  it('a composer command matching a studio panel id wakes the dock without reaching the session', async () => {
+    const b = await bench()
+    const off = b.slots.register(
+      { name: 'details.studio', id: 'design', order: 10, label: 'Design' } as never, (() => null) as never)
+    await Promise.resolve() // ledger notifications batch per microtask
+    const handled = await b.composerApi(ROOT).command!('/design')
+    expect(handled).toBe(true)
+    expect(b.layoutFake.openDetails).toHaveBeenCalledTimes(1)
+    const details = (b.entryOf('details').inject as unknown as (sessionId: SessionId) => DetailsInjected)(ROOT)
+    expect(details.hooks.studio.getSnapshot()).toBe('design')
+    // Selecting a tool call returns the dock to the built-in details tab.
+    const { injected: chat } = b.chatViewApi(ROOT)
+    chat.openDetails({ turnSeq: 1, callId: 'c1' })
+    expect(details.hooks.studio.getSnapshot()).toBe(null)
+    // Unmatched commands fall through to the session path (the fixture session
+    // leaves command unstubbed, which proves the line reached it).
+    await expect(b.composerApi(ROOT).command!('/nope')).rejects.toThrow(/command is not stubbed/)
+    off()
     await b.runtime.dispose()
   })
 })

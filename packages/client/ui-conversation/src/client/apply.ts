@@ -2,7 +2,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { resolveSlotLabel, type BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  resolveWorkspacePath, type ISessions, type SessionId,
+  createSnapshotStore, resolveWorkspacePath, type ISessions, type SessionId, type SnapshotStore,
 } from '@deepseek-ai/dsh-client-runtime/client'
 // Type-only: the ctx.settingsScope Context merge. Cross-plugin collaboration
 // goes through the service, never a value import (client bundle purity gate).
@@ -14,7 +14,7 @@ import type { ViewTab } from './contract/views.ts'
 import type {
   ApprovalWait, ChatNodeTurnDataInjected, ChatScrollPosition, ChatViewInjected, ComposerBarInjected,
   ComposerChainProps, ConversationInjected, ConversationSessionHeaderInjected, ConversationSessionInjected,
-  DetailsInjected,
+  DetailsInjected, DetailsToggleInjected,
 } from './contract/slots.ts'
 import type { InputNotice } from './input/contract.ts'
 import { createChatStore } from './stores.ts'
@@ -35,6 +35,7 @@ import { queueDockEntry } from './queue/QueueDock.tsx'
 import { ConversationRoot } from './skeleton/ConversationRoot.tsx'
 import { ConversationSession, ConversationSessionHeader } from './skeleton/ConversationSession.tsx'
 import { DetailsPanel } from './skeleton/DetailsPanel.tsx'
+import { DetailsToggleButton } from './skeleton/DetailsToggle.tsx'
 import { en, NS, zh, type ConversationKey } from './locales.ts'
 import { registerConversationNodes } from './conversation-nodes/register.ts'
 import { registerChatNodeRenderers } from './chat/register-node-renderers.ts'
@@ -163,6 +164,35 @@ export function apply(ctx: Context): void {
     list: viewTabs,
     subscribe: (fn: () => void) => slots.subscribe('conversation.view', fn),
     version: () => slots.getVersion('conversation.view'),
+  }
+
+  // Studio panel tabs ride their own slot ledger (details.studio), projected
+  // with the same label-fallback rule as the conversation view ring.
+  const studioTabs = (): ViewTab[] => {
+    const tabs: ViewTab[] = []
+    for (const entry of slots.entries('details.studio')) {
+      /* v8 ignore next -- unreachable: list registration validates id at load. */
+      if (entry.options.id === undefined) continue
+      tabs.push({ id: entry.options.id, label: resolveSlotLabel(entry.options.label) ?? entry.options.id })
+    }
+    return tabs
+  }
+  const studioViews = {
+    list: studioTabs,
+    subscribe: (fn: () => void) => slots.subscribe('details.studio', fn),
+    version: () => slots.getVersion('details.studio'),
+  }
+
+  // Active studio panel per session. Not persisted: like the chat scroll
+  // positions, a fresh page load keeps the tool-details default. Writable
+  // from the composer command path, which has no store seat.
+  const studioSelection = new Map<SessionId, SnapshotStore<string | null>>()
+  const studioStoreFor = (sessionId: SessionId): SnapshotStore<string | null> => {
+    const existing = studioSelection.get(sessionId)
+    if (existing !== undefined) return existing
+    const created = createSnapshotStore<string | null>(null)
+    studioSelection.set(sessionId, created)
+    return created
   }
 
   // The per-session input machine registry (SessionInputResolver face; published as
@@ -346,6 +376,15 @@ export function apply(ctx: Context): void {
           })
         },
         command: async (line) => {
+          // Studio wake-up: `/design`, `/ppt`, … switch the details dock to
+          // the panel a plugin registered under that id, without reaching the
+          // agent. Unmatched lines fall through to the session command path.
+          const wake = /^\/([\w-]+)\s*$/.exec(line)
+          if (wake !== null && studioViews.list().some(tab => tab.id === wake[1])) {
+            studioStoreFor(sessionId).set(wake[1] ?? null)
+            layout.openDetails()
+            return true
+          }
           const session = sessions.binding(sessionId)?.session
           if (session === undefined) return false
           const result = await session.command(line)
@@ -389,6 +428,8 @@ export function apply(ctx: Context): void {
       return {
         openDetails: (target) => {
           actions.select(target)
+          // Selecting a tool call returns the dock to the built-in details tab.
+          studioStoreFor(sessionId).set(null)
           layout.openDetails()
         },
         fileMentions: owner => ctx.get('chatFileMentions')?.forClosing(owner),
@@ -446,11 +487,29 @@ export function apply(ctx: Context): void {
     locale: NS,
     children: {
       'conversation.details.tool': { kind: 'single', scope: 'session' },
+      'details.studio': { kind: 'list', scope: 'session' },
     },
     store: chatStore,
-    inject: (): DetailsInjected => ({
+    inject: (sessionId: SessionId): DetailsInjected => ({
+      openDetails: () => { layout.openDetails() },
       closeDetails: () => { layout.closeDetails() },
+      studioViews,
+      setStudio: (id) => { studioStoreFor(sessionId).set(id) },
+      hooks: { studio: studioStoreFor(sessionId) },
     }),
   }, DetailsPanel)
+
+  // The details-dock opener in the session header utilities row. Owned here
+  // (not by any studio plugin) so the dock stays reachable — and simply shows
+  // its empty details state — when no studio plugin is composed in.
+  slots.register({
+    name: 'conversation.session.header.utilities',
+    id: 'details-toggle',
+    order: 0,
+    locale: NS,
+    inject: (): DetailsToggleInjected => ({
+      openDetails: () => { layout.openDetails() },
+    }),
+  }, DetailsToggleButton)
 
 }

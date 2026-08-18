@@ -1,12 +1,12 @@
-// DetailsPanel: close button + the selected call's args and
-// result — args as JSON, the result raw except for a terminal-card call, whose
-// Output section is the command's terminal card. Reads the
-// selection from the shared chat
-// store (conversation writes, this panel reads — the cross-registration
-// share the store seat exists for) and derives the call material from the
-// session snapshot — no data of its own.
+// DetailsPanel: the details dock occupant. A fixed 详情 tab renders the
+// selected tool call's args and result; studio panels (Design, PPT, …) come
+// from the `details.studio` slot ledger as additional tabs. The active
+// studio panel is a per-session observable shared with the composer command
+// path (`/design`, `/ppt` wake-up); selecting a tool call clears it, which
+// returns the dock to the 详情 tab. With no studio plugin composed in, the
+// dock is just the tool-details panel with its empty guidance.
 
-import { Fragment } from 'react'
+import { Fragment, useState, useSyncExternalStore } from 'react'
 import { CodeBlock } from '@deepseek-ai/dsh-client-ui-primitives'
 import { shallowEqual } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ConversationSnapshot, RunningToolCall, ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-runtime/client'
@@ -63,7 +63,17 @@ function rawResultText(block: ToolCallBlock): string {
   return parts.join('\n')
 }
 
-export function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }: DetailsPanelProps) {
+export function DetailsPanel({
+  useSession, useSessions, sessionId, useStore, renderSlot,
+  closeDetails, studioViews, setStudio, useStudio, t,
+}: DetailsSlotProps) {
+  useSyncExternalStore(studioViews.subscribe, studioViews.version)
+  const studioTabs = studioViews.list()
+  const activeStudioId = useStudio(s => s)
+  // A stale id (plugin composed out) falls back to the tool-details tab.
+  const activeStudio = studioTabs.find(tab => tab.id === activeStudioId)
+  const hasStudio = studioTabs.length > 0
+
   const selection = useStore(s => s.selection)
   // Session workspace root: an omitted or relative terminal cwd resolves
   // against it, which the pure presenter cannot see.
@@ -75,54 +85,113 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useStore, ren
     s => (callId === undefined ? null : materialFor(s, callId)),
     (a, b) => shallowEqual(a, b))
 
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const showStudio = activeStudio !== undefined
+
   return (
     <div className={css.root}>
       <div className={css.header}>
-        <div className={css.title}>
-          {selection === null ? t('details.title') : material?.name ?? selection.toolName ?? t('details.title')}
+        {hasStudio ? (
+          <div className={css.tabs} role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!showStudio}
+              className={css.tab}
+              data-active={!showStudio || undefined}
+              onClick={() => { setStudio(null) }}
+            >
+              {t('details.title')}
+            </button>
+            {studioTabs.map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={tab.id === activeStudio?.id}
+                className={css.tab}
+                data-active={tab.id === activeStudio?.id || undefined}
+                onClick={() => { setStudio(tab.id) }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className={css.title}>
+            {selection === null ? t('details.title') : material?.name ?? selection.toolName ?? t('details.title')}
+          </div>
+        )}
+        <div className={css.headerActions}>
+          {showStudio && (
+            <button
+              type="button"
+              className={css.refresh}
+              aria-label={t('details.refresh')}
+              onClick={() => { setRefreshKey(k => k + 1) }}
+            >
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+                <path
+                  d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 4.5V8h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button" className={css.close} aria-label={t('details.close')}
+            onClick={() => { closeDetails() }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
-        <button
-          type="button" className={css.close} aria-label={t('details.close')}
-          onClick={() => { closeDetails() }}
-        >
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
-            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        </button>
       </div>
       <div className={css.body}>
-        {selection === null || callId === undefined
-          ? <div className={css.empty}>{t('details.empty')}</div>
-          : material === null
-            ? <div className={css.empty}>{t('details.notInWindow')}</div>
-            : (
-              <>
-                {material.argsRaw !== null && (
+        {showStudio
+          ? (
+            <div className={css.studioBody}>
+              {renderSlot('details.studio', { refreshKey }, { only: activeStudio.id })}
+            </div>
+          )
+          : selection === null || callId === undefined
+            ? <div className={css.empty}>{t('details.empty')}</div>
+            : material === null
+              ? <div className={css.empty}>{t('details.notInWindow')}</div>
+              : (
+                <>
+                  {material.argsRaw !== null && (
+                    <section className={css.section}>
+                      <div className={css.sectionLabel}>{t('details.input')}</div>
+                      <CodeBlock code={pretty(material.argsRaw)} lang="json" copyLabel={t('copy')} copiedLabel={t('copied')} />
+                    </section>
+                  )}
                   <section className={css.section}>
-                    <div className={css.sectionLabel}>{t('details.input')}</div>
-                    <CodeBlock code={pretty(material.argsRaw)} lang="json" copyLabel={t('copy')} copiedLabel={t('copied')} />
+                    <div className={css.sectionLabel}>{t('details.output')}</div>
+                    {/* Keyed by the selected call: the body owns per-call view
+                        state (the terminal card's expand and copy), which React
+                        would otherwise carry into the next selection because the
+                        panel does not unmount between calls. */}
+                    <Fragment key={callId}>
+                      {renderSlot('conversation.details.tool', { block: material.block, cwd: sessionCwd }, {
+                        fallback: 'kind' in material.block
+                          ? (
+                            <pre className={css.code} data-error={material.block.isError || undefined}>
+                              {rawResultText(material.block)}
+                            </pre>
+                          )
+                          : <div className={css.empty}>{t('details.running')}</div>,
+                      })}
+                    </Fragment>
                   </section>
-                )}
-                <section className={css.section}>
-                  <div className={css.sectionLabel}>{t('details.output')}</div>
-                  {/* Keyed by the selected call: the body owns per-call view
-                      state (the terminal card's expand and copy), which React
-                      would otherwise carry into the next selection because the
-                      panel does not unmount between calls. */}
-                  <Fragment key={callId}>
-                    {renderSlot('conversation.details.tool', { block: material.block, cwd: sessionCwd }, {
-                      fallback: 'kind' in material.block
-                        ? (
-                          <pre className={css.code} data-error={material.block.isError || undefined}>
-                            {rawResultText(material.block)}
-                          </pre>
-                        )
-                        : <div className={css.empty}>{t('details.running')}</div>,
-                    })}
-                  </Fragment>
-                </section>
-              </>
-            )}
+                </>
+              )}
       </div>
     </div>
   )
