@@ -169,8 +169,8 @@ export function DetailsPanel({
       <div className={css.body}>
         {showStudio
           ? (
-            <div key={refreshKey} className={css.studioBody}>
-              {renderSlot('details.studio', {}, { only: activeStudio.id })}
+            <div className={css.studioBody}>
+              {renderSlot('details.studio', { refreshKey }, { only: activeStudio.id })}
             </div>
           )
           : selection === null || callId === undefined

@@ -725,7 +725,10 @@ export type ChatViewSlotProps =
   & PropsStore<ChatStore> & ChatViewInjected & PropsLocale<'conversation'>
 
 /** Owner share of a studio view entry in the right details panel. */
-export interface DetailsStudioOwnerProps {}
+export interface DetailsStudioOwnerProps {
+  /** Bump to force the studio iframe to reload. */
+  refreshKey?: number
+}
 
 /**
  * Injected share of the details slot: the panel is otherwise a pure reader of
