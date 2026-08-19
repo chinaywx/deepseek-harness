@@ -129,10 +129,12 @@ export function apply(ctx: ClientContext): void {
       // entry and delivers useStore/actions to AppFrame as standard props.
       store: createLayoutStore,
       // The hook's only side effect connects the root store to ctx.layout;
-      // conversation business actions belong to their registrants.
+      // conversation business actions belong to their registrants. The
+      // returned callback lets AppFrame publish the details-open fact back
+      // (store read → service face), so every close path reflects.
       inject: (actions: PanelActions) => {
         layout.attachPanels(actions)
-        return {}
+        return { reportDetailsOpen: (open: boolean) => { layout.reportDetailsOpen(open) } }
       },
     }, AppFrame)
     return () => {

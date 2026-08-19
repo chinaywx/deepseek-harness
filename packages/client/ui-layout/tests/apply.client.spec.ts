@@ -53,7 +53,7 @@ describe('ui-layout client apply', () => {
     expect(slots.spec('details')).toEqual({ kind: 'single', scope: 'session' })
   })
 
-  it('injects no business face and attaches the layout actions', async () => {
+  it('injects only the details-open report channel and attaches the layout actions', async () => {
     const { ctx, slots } = await bench()
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
@@ -61,10 +61,14 @@ describe('ui-layout client apply', () => {
       setSidebar: vi.fn(), setDetails: vi.fn(), toggleSidebar: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
     }
     const injected = (slots.entries('root')[0]!.inject as (actions: never) => object)(actions as never)
-    expect(injected).toEqual({})
+    expect(Object.keys(injected)).toEqual(['reportDetailsOpen'])
     const layout = ctx.get('layout') as LayoutController
     layout.toggleSidebar()
     expect(actions.toggleSidebar).toHaveBeenCalledOnce()
+    // The report channel drives the service's read face.
+    expect(layout.detailsOpen.getSnapshot()).toBe(false)
+    ;(injected as { reportDetailsOpen: (open: boolean) => void }).reportDetailsOpen(true)
+    expect(layout.detailsOpen.getSnapshot()).toBe(true)
   })
 
   it('theme presenter applies the initial snapshot, follows theme/change, and unwinds on dispose', async () => {

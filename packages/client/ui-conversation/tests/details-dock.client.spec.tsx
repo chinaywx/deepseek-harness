@@ -157,10 +157,37 @@ describe('DetailsToggleButton', () => {
         useInput={(() => { throw new Error('unused') })}
         inputActions={{ setDraft: () => {}, addImages: () => true, removeImage: () => {}, pruneImages: () => {}, submit: () => {} }}
         openDetails={openDetails}
+        useDetailsOpen={selector => selector(false)}
         t={t}
       />,
     )
     fireEvent.click(view.getByRole('button', { name: '打开面板' }))
     expect(openDetails).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides while the dock is open and reappears after it closes', async () => {
+    const open = createSnapshotStore(false)
+    const props = {
+      sessionId: SID,
+      useSession: bindSnapshotSelector({ getSnapshot: () => snapshotBase(), subscribe: () => () => {} }),
+      useSessions: bindSnapshotSelector(createSnapshotStore<SessionListState>(
+        { ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined })),
+      useWorkspaces: bindSnapshotSelector(createSnapshotStore<WorkspaceListState>({
+        items: [], archivedSessionIds: [], state: 'idle', phase: 'ready', error: null,
+        baselinesReady: true, recentWorkspaceId: undefined,
+      })),
+      useProjection: (() => undefined),
+      useInput: (() => { throw new Error('unused') }),
+      inputActions: { setDraft: () => {}, addImages: () => true, removeImage: () => {}, pruneImages: () => {}, submit: () => {} },
+      openDetails: vi.fn(),
+      useDetailsOpen: bindSnapshotSelector(open),
+      t,
+    } satisfies Parameters<typeof DetailsToggleButton>[0]
+    const view = render(<DetailsToggleButton {...props} />)
+    expect(view.queryByRole('button')).not.toBeNull()
+    open.set(true)
+    await vi.waitFor(() => { expect(view.queryByRole('button')).toBeNull() })
+    open.set(false)
+    await vi.waitFor(() => { expect(view.queryByRole('button')).not.toBeNull() })
   })
 })

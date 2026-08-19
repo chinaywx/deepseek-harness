@@ -9,6 +9,7 @@
  * declared action set, delivered as the registration's bound actions.
  */
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
+import { createSnapshotStore, type ObservableSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { createLayoutStore } from './stores.ts'
 
 /** The layout store's bound action set (framework-baked, draft params peeled). */
@@ -16,9 +17,10 @@ export type PanelActions = BoundActions<ReturnType<typeof createLayoutStore>>
 
 /**
  * The outward layout face (`ctx.layout`): the panel transitions other
- * plugins may trigger — and exactly what a test fake must supply. The
- * attachPanels wiring hook stays on the concrete class (root-entry assembly
- * only).
+ * plugins may trigger, plus the read-only details-open fact (published by the
+ * root entry from the store, so every close path — ✕, concession squeeze —
+ * reflects) — and exactly what a test fake must supply. The attachPanels
+ * wiring hook stays on the concrete class (root-entry assembly only).
  */
 export interface ILayout {
   /** Toggle the sidebar panel (closed ⟷ contract default width). */
@@ -27,11 +29,19 @@ export interface ILayout {
   openDetails(): void
   /** Close the details panel. */
   closeDetails(): void
+  /** Whether the details panel is currently open (live, every close path). */
+  readonly detailsOpen: ObservableSnapshot<boolean>
 }
 
 /** Cross-plugin panel-action face (ctx.layout). */
 export class LayoutController implements ILayout {
   #panels: PanelActions | undefined
+  readonly #detailsOpen = createSnapshotStore(false)
+
+  /** Whether the details panel is currently open. */
+  get detailsOpen(): ObservableSnapshot<boolean> {
+    return this.#detailsOpen
+  }
 
   /**
    * Adopt the root entry's bound store actions. Called from the root
@@ -42,6 +52,11 @@ export class LayoutController implements ILayout {
    */
   attachPanels(actions: PanelActions): void {
     this.#panels = actions
+  }
+
+  /** Publish the details-open fact; the root entry calls this from its store read. */
+  reportDetailsOpen(open: boolean): void {
+    this.#detailsOpen.set(open)
   }
 
   /** Toggle the sidebar panel (closed ⟷ contract default width). */

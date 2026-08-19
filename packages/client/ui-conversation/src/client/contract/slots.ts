@@ -743,10 +743,15 @@ export interface DetailsInjected {
 export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'details.studio'>
   & InjectFace<DetailsInjected> & PropsLocale<'conversation'>
 
-/** Injected share of the header details-dock toggle: a pure layout opener. */
+/** Injected share of the header details-dock toggle: a pure layout opener plus the live open fact. */
 export interface DetailsToggleInjected {
   /** Open the details panel (layout geometry stays with ctx.layout). */
   openDetails: () => void
+  /** Registrant hooks compartment (bound to useDetailsOpen by the renderer). */
+  hooks: {
+    /** Whether the details dock is currently open (the toggle hides while it is). */
+    detailsOpen: ObservableSnapshot<boolean>
+  }
 }
 
 /** Owner share common to the hero / New-Session Workspace pickers. */

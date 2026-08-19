@@ -13,7 +13,10 @@ export type DetailsToggleProps =
   & InjectFace<DetailsToggleInjected>
   & PropsLocale<'conversation'>
 
-export function DetailsToggleButton({ openDetails, t }: DetailsToggleProps) {
+export function DetailsToggleButton({ openDetails, useDetailsOpen, t }: DetailsToggleProps) {
+  // The dock's ✕ is the only close gesture, so the opener hides while open.
+  const open = useDetailsOpen(s => s)
+  if (open) return null
   return (
     <button
       type="button"

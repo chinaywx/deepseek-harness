@@ -507,6 +507,7 @@ export function apply(ctx: Context): void {
     locale: NS,
     inject: (): DetailsToggleInjected => ({
       openDetails: () => { layout.openDetails() },
+      hooks: { detailsOpen: layout.detailsOpen },
     }),
   }, DetailsToggleButton)
 

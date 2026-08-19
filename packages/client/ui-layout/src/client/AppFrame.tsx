@@ -17,11 +17,12 @@ import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './column
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
 
-/** Full composed props: runtime share + child-slot render share + store share. */
+/** Full composed props: runtime share + child-slot render share + store share + the details-open report back-channel. */
 export type AppFrameProps =
   & PropsRuntime<'root'>
   & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.overlay'>
   & PropsStore<ReturnType<typeof createLayoutStore>>
+  & { reportDetailsOpen: (open: boolean) => void }
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
@@ -89,8 +90,15 @@ export function AppFrame({
   useSessions,
   actions,
   renderSlot,
+  reportDetailsOpen,
 }: AppFrameProps) {
   const panels = useStore(s => s)
+  // Publish the details-open fact to ctx.layout: derived from the store, so
+  // every open/close path (toggle, ✕, session switch, concession) reflects.
+  const detailsOpen = panels.details > 0
+  useEffect(() => {
+    reportDetailsOpen(detailsOpen)
+  }, [detailsOpen, reportDetailsOpen])
   const detailsSession = useSessions((s) => {
     const current = s.current
     return current !== undefined && s.byId[current]?.blank === false ? current : undefined
