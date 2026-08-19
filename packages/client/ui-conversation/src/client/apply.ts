@@ -493,7 +493,7 @@ export function apply(ctx: Context): void {
       closeDetails: () => { layout.closeDetails() },
       studioViews,
       setStudio: (id) => { studioStoreFor(sessionId).set(id) },
-      hooks: { studio: studioStoreFor(sessionId) },
+      hooks: { studio: studioStoreFor(sessionId), detailsOpen: layout.detailsOpen },
     }),
   }, DetailsPanel)
 

@@ -15,7 +15,7 @@ import css from './DetailsPanel.module.css'
 export type DetailsPanelProps = DetailsSlotProps
 
 export function DetailsPanel({
-  renderSlot, closeDetails, studioViews, setStudio, useStudio, t,
+  renderSlot, closeDetails, studioViews, setStudio, useStudio, useDetailsOpen, t,
 }: DetailsSlotProps) {
   useSyncExternalStore(studioViews.subscribe, studioViews.version)
   const studioTabs = studioViews.list()
@@ -23,6 +23,9 @@ export function DetailsPanel({
   // Default to the first panel; a stale id (plugin composed out) lands there too.
   const activeStudio = studioTabs.find(tab => tab.id === activeStudioId) ?? studioTabs[0]
   const hasStudio = studioTabs.length > 0
+  // The studio iframe mounts only while the dock is open: a panel the user
+  // never looks at never loads.
+  const dockOpen = useDetailsOpen(s => s)
 
   const [refreshKey, setRefreshKey] = useState(0)
   // Fullscreen covers the whole window (the conversation column included):
@@ -34,6 +37,10 @@ export function DetailsPanel({
     window.addEventListener('keydown', onKey)
     return () => { window.removeEventListener('keydown', onKey) }
   }, [fullscreen])
+  // A dock closed by any path (✕, session switch, concession) exits fullscreen.
+  useEffect(() => {
+    if (!dockOpen) setFullscreen(false)
+  }, [dockOpen])
 
   return (
     <div className={clsx(css.root, fullscreen && css.fullscreen)} data-fullscreen={fullscreen || undefined}>
@@ -112,13 +119,15 @@ export function DetailsPanel({
         </div>
       </div>
       <div className={css.body}>
-        {activeStudio !== undefined
-          ? (
-            <div className={css.studioBody}>
-              {renderSlot('details.studio', { refreshKey }, { only: activeStudio.id })}
-            </div>
-          )
-          : <div className={css.empty}>{t('details.noPanels')}</div>}
+        {!dockOpen
+          ? null
+          : activeStudio !== undefined
+            ? (
+              <div className={css.studioBody}>
+                {renderSlot('details.studio', { refreshKey }, { only: activeStudio.id })}
+              </div>
+            )
+            : <div className={css.empty}>{t('details.noPanels')}</div>}
       </div>
     </div>
   )

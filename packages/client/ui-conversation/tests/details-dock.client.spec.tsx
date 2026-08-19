@@ -55,9 +55,10 @@ function snapshotBase(): ConversationSnapshot {
   }
 }
 
-function mountDock(studioId: string | null, views: DetailsSlotProps['studioViews'] = studioViews) {
+function mountDock(studioId: string | null, views: DetailsSlotProps['studioViews'] = studioViews, open = true) {
   const snap = snapshotBase()
   const studio = createSnapshotStore<string | null>(studioId)
+  const dockOpen = createSnapshotStore(open)
   const calls: StudioCall[] = []
   const renderSlot: DetailsSlotProps['renderSlot'] = (_key, owner, options) => {
     calls.push({ owner: owner as DetailsStudioOwnerProps, only: (options as { only?: string } | undefined)?.only })
@@ -83,6 +84,7 @@ function mountDock(studioId: string | null, views: DetailsSlotProps['studioViews
       studioViews={views}
       setStudio={(id) => { studio.set(id) }}
       useStudio={bindSnapshotSelector(studio)}
+      useDetailsOpen={bindSnapshotSelector(dockOpen)}
       t={t}
     />,
   )
@@ -137,6 +139,12 @@ describe('DetailsPanel studio dock', () => {
     expect(view.queryAllByRole('tab')).toHaveLength(0)
     expect(view.getByText('暂无可用面板')).toBeTruthy()
     expect(view.queryByRole('button', { name: '刷新' })).toBeNull()
+  })
+
+  it('does not mount the studio iframe while the dock is closed', () => {
+    const { view, calls } = mountDock(null, studioViews, false)
+    expect(view.queryByTestId('studio-seat')).toBeNull()
+    expect(calls).toHaveLength(0)
   })
 })
 

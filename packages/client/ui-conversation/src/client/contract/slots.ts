@@ -732,10 +732,12 @@ export interface DetailsInjected {
   }
   /** Select the active studio panel; null selects the built-in tool-details tab. */
   setStudio: (id: string | null) => void
-  /** Registrant hooks compartment (bound to useStudio by the renderer). */
+  /** Registrant hooks compartment (bound to useStudio/useDetailsOpen by the renderer). */
   hooks: {
-    /** Active studio panel id for this session; null = the tool-details tab. */
+    /** Active studio panel id for this session; null = no explicit selection. */
     studio: ObservableSnapshot<string | null>
+    /** Whether the dock is open; the studio iframe only mounts while it is. */
+    detailsOpen: ObservableSnapshot<boolean>
   }
 }
 

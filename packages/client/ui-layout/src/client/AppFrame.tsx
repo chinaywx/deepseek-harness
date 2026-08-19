@@ -108,11 +108,13 @@ export function AppFrame({
 
   const lastSession = useRef(detailsSession)
   useLayoutEffect(() => {
-    if (detailsSession === undefined) return
-    if (lastSession.current !== undefined && lastSession.current !== detailsSession) {
-      actions.closeDetails()
+    // Any current-session change closes the details dock — including leaving
+    // for the hero/new-session screen (undefined) — so a fresh session never
+    // inherits an open panel from the previous one.
+    if (lastSession.current !== detailsSession) {
+      if (lastSession.current !== undefined) actions.closeDetails()
+      lastSession.current = detailsSession
     }
-    lastSession.current = detailsSession
   }, [actions, detailsSession])
 
   // Track the frame's own box (not the window): rAF-throttled ResizeObserver.

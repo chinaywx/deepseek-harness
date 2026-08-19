@@ -173,7 +173,7 @@ describe('AppFrame', () => {
     expect(slotCalls.map(c => c.key)).toContain('details')
   })
 
-  it('ignores unselected states and closes only when the Session id changes', () => {
+  it('closes the dock on any current-session change, including blank and hero states', () => {
     const { frame, instance, rerenderFrame } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
 
@@ -184,17 +184,20 @@ describe('AppFrame', () => {
     act(() => { rerenderFrame() })
     expect(tracks(frame)).toEqual([280, 0])
 
+    // Switching to a blank session also closes the dock — a fresh session
+    // never inherits an open panel.
     act(() => { instance.actions.openDetails() })
     selectedSession.current = 's-blank' as SessionId
     selectedSessionBlank.current = true
     act(() => { rerenderFrame() })
     expect(tracks(frame)).toEqual([280, 0])
-    expect(instance.getSnapshot().details).toBe(DETAILS_DEFAULT)
+    expect(instance.getSnapshot().details).toBe(0)
 
+    // Returning to a real session keeps the dock closed until reopened.
     selectedSession.current = 's-next' as SessionId
     selectedSessionBlank.current = false
     act(() => { rerenderFrame() })
-    expect(tracks(frame)).toEqual([280, DETAILS_DEFAULT])
+    expect(tracks(frame)).toEqual([280, 0])
 
     selectedSession.current = undefined
     act(() => { rerenderFrame() })
