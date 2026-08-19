@@ -38,6 +38,8 @@ export interface ToolCallOwnerProps {
   openFile: (path: string) => void
   /** Inspect this call in the trajectory view when available. */
   inspect?: (() => void) | undefined
+  /** Select this call and open it in the details dock's 详情 tab. */
+  openDetails?: (() => void) | undefined
 }
 
 /** Full props of a registered atomic Tool view. */

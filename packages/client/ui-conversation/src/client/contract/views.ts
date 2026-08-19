@@ -4,7 +4,13 @@
 export type CallId = string
 
 /** Selection target for the details linkage channel (toolcall is the step special case). */
-export interface SelectionTarget { turnSeq: number; stepSeq?: number; callId?: CallId; toolName?: string }
+export interface SelectionTarget {
+  /** Turn anchor of a step-level selection; callId-addressed selections omit it (nothing reads it). */
+  turnSeq?: number
+  stepSeq?: number
+  callId?: CallId
+  toolName?: string
+}
 
 /**
  * One conversation view tab, projected from a 'conversation.view' slot

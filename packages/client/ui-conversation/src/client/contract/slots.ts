@@ -367,6 +367,8 @@ export interface ChatNodeOwnerProps {
   cwd?: string | undefined
   openFile: (path: string) => void
   inspectCall: (callId: CallId) => void
+  /** Select a Tool call and open it in the details dock's 详情 tab. */
+  openCallDetails: (callId: CallId, toolName: string) => void
   forkAt: (seq: number) => void
   /** Resolve a session-authorized historical image for inline display. */
   loadImage: (attachment: ImageAttachmentRef) => Promise<string>

@@ -53,7 +53,7 @@ function stateStatus(state: ToolRowState, t: BashRowProps['t']): string | null {
  * whole row toggling the command's terminal or generic error card (ToolRow's unified
  * expand interaction, replicated locally per the registrant posture).
  */
-export function BashRow({ toolName, block, sessionId, useSessions, inspect, t }: BashRowProps) {
+export function BashRow({ toolName, block, sessionId, useSessions, inspect, openDetails, t }: BashRowProps) {
   const model = toolRowModel(toolName, block)
   // Session workspace root: the terminal view's cwd resolves against it (an
   // omitted workdir IS the workspace), which the pure presenter cannot do.
@@ -77,6 +77,9 @@ export function BashRow({ toolName, block, sessionId, useSessions, inspect, t }:
   const failureLine = model.state === 'error' ? model.errorSummary : null
   const toggleExpand = () => {
     setExpanded(v => !v)
+    // Row activation also selects the call into the details dock (same posture
+    // as ToolRow's toggle).
+    openDetails?.()
   }
   const toggleFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!expandable || (event.key !== 'Enter' && event.key !== ' ')) return
