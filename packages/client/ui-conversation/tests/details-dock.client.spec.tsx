@@ -119,6 +119,19 @@ describe('DetailsPanel studio dock', () => {
     expect(calls.at(-1)?.only).toBe('ppt')
   })
 
+  it('the fullscreen toggle covers the window and Esc or ✕ exits it', () => {
+    const { view } = mountDock(null)
+    const root = () => view.container.firstChild as HTMLElement
+    expect(root().getAttribute('data-fullscreen')).toBeNull()
+    fireEvent.click(view.getByRole('button', { name: '全屏' }))
+    expect(root().getAttribute('data-fullscreen')).toBe('true')
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(root().getAttribute('data-fullscreen')).toBeNull()
+    fireEvent.click(view.getByRole('button', { name: '全屏' }))
+    fireEvent.click(view.getByRole('button', { name: '关闭面板' }))
+    expect(root().getAttribute('data-fullscreen')).toBeNull()
+  })
+
   it('with no studio plugin composed in, the dock shows its empty state', () => {
     const { view } = mountDock(null, emptyStudioViews)
     expect(view.queryAllByRole('tab')).toHaveLength(0)
