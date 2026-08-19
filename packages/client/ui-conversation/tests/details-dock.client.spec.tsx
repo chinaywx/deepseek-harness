@@ -13,7 +13,6 @@ import type { SessionProviderComponent } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DetailsSlotProps, DetailsStudioOwnerProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
-import { createChatStore } from '../src/client/stores.ts'
 import { DetailsPanel } from '../src/client/skeleton/DetailsPanel.tsx'
 import { DetailsToggleButton } from '../src/client/skeleton/DetailsToggle.tsx'
 import { zh } from '../src/client/locales.ts'
@@ -27,11 +26,17 @@ const SID = 's1' as SessionId
 /** Minimal framework seat for direct DetailsPanel host tests. */
 const SessionProviderStub: SessionProviderComponent = ({ children }) => children(SID)
 
-const STUDIO_TABS = [{ id: 'design', label: 'Design' }, { id: 'ppt', label: 'PPT' }]
+const STUDIO_TABS = [{ id: 'ppt', label: 'PPT' }, { id: 'design', label: 'Design' }]
 
 /** Two-entry studio ledger, as projected from the details.studio slot. */
 const studioViews: DetailsSlotProps['studioViews'] = {
   list: () => STUDIO_TABS,
+  subscribe: () => () => {},
+  version: () => 0,
+}
+
+const emptyStudioViews: DetailsSlotProps['studioViews'] = {
+  list: () => [],
   subscribe: () => () => {},
   version: () => 0,
 }
@@ -50,17 +55,13 @@ function snapshotBase(): ConversationSnapshot {
   }
 }
 
-function mountDock(studioId: string | null) {
+function mountDock(studioId: string | null, views: DetailsSlotProps['studioViews'] = studioViews) {
   const snap = snapshotBase()
-  const chat = createChatStore().create()
   const studio = createSnapshotStore<string | null>(studioId)
   const calls: StudioCall[] = []
-  const renderSlot: DetailsSlotProps['renderSlot'] = (key, owner, options) => {
-    if (key === 'details.studio') {
-      calls.push({ owner: owner as DetailsStudioOwnerProps, only: (options as { only?: string } | undefined)?.only })
-      return <div data-testid="studio-seat" />
-    }
-    return <div data-testid="tool-details-seat" />
+  const renderSlot: DetailsSlotProps['renderSlot'] = (_key, owner, options) => {
+    calls.push({ owner: owner as DetailsStudioOwnerProps, only: (options as { only?: string } | undefined)?.only })
+    return <div data-testid="studio-seat" />
   }
   const view = render(
     <DetailsPanel
@@ -77,11 +78,9 @@ function mountDock(studioId: string | null) {
       useProjection={(() => undefined)}
       useInput={(() => { throw new Error('unused') })}
       inputActions={{ setDraft: () => {}, addImages: () => true, removeImage: () => {}, pruneImages: () => {}, submit: () => {} }}
-      useStore={bindSnapshotSelector(chat)}
-      actions={chat.actions}
-      openDetails={vi.fn()}
       closeDetails={vi.fn()}
-      studioViews={studioViews}
+      openDetails={vi.fn()}
+      studioViews={views}
       setStudio={(id) => { studio.set(id) }}
       useStudio={bindSnapshotSelector(studio)}
       t={t}
@@ -91,40 +90,40 @@ function mountDock(studioId: string | null) {
 }
 
 describe('DetailsPanel studio dock', () => {
-  it('renders the built-in 详情 tab plus one tab per studio panel, 详情 active by default', () => {
-    const { view } = mountDock(null)
+  it('renders one tab per studio panel and shows the first panel by default', () => {
+    const { view, calls } = mountDock(null)
     const tabs = view.getAllByRole('tab')
-    expect(tabs.map(tab => tab.textContent)).toEqual(['详情', 'Design', 'PPT'])
+    expect(tabs.map(tab => tab.textContent)).toEqual(['PPT', 'Design'])
     expect(tabs[0]!.getAttribute('aria-selected')).toBe('true')
-    // No tool-call selection: the details empty guidance shows.
-    expect(view.getByText('点击消息流中的工具行查看详情')).toBeTruthy()
-    expect(view.queryByTestId('studio-seat')).toBeNull()
+    expect(view.getByTestId('studio-seat')).toBeTruthy()
+    expect(calls.at(-1)).toEqual({ owner: { refreshKey: 0 }, only: 'ppt' })
   })
 
   it('clicking a studio tab writes the selection and renders that panel through details.studio', () => {
     const { view, calls, studio } = mountDock(null)
-    fireEvent.click(view.getByRole('tab', { name: 'PPT' }))
-    expect(studio.getSnapshot()).toBe('ppt')
-    expect(view.getByTestId('studio-seat')).toBeTruthy()
-    expect(calls.at(-1)?.only).toBe('ppt')
-    // And the 详情 tab returns the dock to the tool-details view.
-    fireEvent.click(view.getByRole('tab', { name: '详情' }))
-    expect(studio.getSnapshot()).toBe(null)
-    expect(view.queryByTestId('studio-seat')).toBeNull()
+    fireEvent.click(view.getByRole('tab', { name: 'Design' }))
+    expect(studio.getSnapshot()).toBe('design')
+    expect(calls.at(-1)?.only).toBe('design')
   })
 
   it('the refresh button bumps the refreshKey owner currency of the active studio panel', () => {
     const { view, calls } = mountDock('design')
-    expect(view.getByTestId('studio-seat')).toBeTruthy()
     expect(calls.at(-1)).toEqual({ owner: { refreshKey: 0 }, only: 'design' })
     fireEvent.click(view.getByRole('button', { name: '刷新' }))
     expect(calls.at(-1)).toEqual({ owner: { refreshKey: 1 }, only: 'design' })
   })
 
-  it('a stale studio id (plugin composed out) falls back to the 详情 tab', () => {
-    const { view } = mountDock('ghost')
-    expect(view.getByRole('tab', { name: '详情' }).getAttribute('aria-selected')).toBe('true')
-    expect(view.queryByTestId('studio-seat')).toBeNull()
+  it('a stale studio id (plugin composed out) falls back to the first panel', () => {
+    const { view, calls } = mountDock('ghost')
+    expect(view.getByRole('tab', { name: 'PPT' }).getAttribute('aria-selected')).toBe('true')
+    expect(calls.at(-1)?.only).toBe('ppt')
+  })
+
+  it('with no studio plugin composed in, the dock shows its empty state', () => {
+    const { view } = mountDock(null, emptyStudioViews)
+    expect(view.queryAllByRole('tab')).toHaveLength(0)
+    expect(view.getByText('暂无可用面板')).toBeTruthy()
+    expect(view.queryByRole('button', { name: '刷新' })).toBeNull()
   })
 })
 
@@ -148,7 +147,7 @@ describe('DetailsToggleButton', () => {
         t={t}
       />,
     )
-    fireEvent.click(view.getByRole('button', { name: '打开详情面板' }))
+    fireEvent.click(view.getByRole('button', { name: '打开面板' }))
     expect(openDetails).toHaveBeenCalledTimes(1)
   })
 })

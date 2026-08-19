@@ -345,10 +345,6 @@ describe('details inject API', () => {
     expect(b.layoutFake.openDetails).toHaveBeenCalledTimes(1)
     injected.closeDetails()
     expect(b.layoutFake.closeDetails).toHaveBeenCalledTimes(1)
-    // The shared handle: details resolves the SAME instance conversation writes.
-    const conv = b.runtime.storeOf('conversation.session', ROOT)
-    const details = b.runtime.storeOf('details', ROOT)
-    expect(details).toBe(conv)
     await b.runtime.dispose()
   })
 

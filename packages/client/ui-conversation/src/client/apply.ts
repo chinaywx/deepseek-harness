@@ -486,10 +486,8 @@ export function apply(ctx: Context): void {
     name: 'details',
     locale: NS,
     children: {
-      'conversation.details.tool': { kind: 'single', scope: 'session' },
       'details.studio': { kind: 'list', scope: 'session' },
     },
-    store: chatStore,
     inject: (sessionId: SessionId): DetailsInjected => ({
       openDetails: () => { layout.openDetails() },
       closeDetails: () => { layout.closeDetails() },

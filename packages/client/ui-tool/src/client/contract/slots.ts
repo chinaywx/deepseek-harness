@@ -38,8 +38,6 @@ export interface ToolCallOwnerProps {
   openFile: (path: string) => void
   /** Inspect this call in the trajectory view when available. */
   inspect?: (() => void) | undefined
-  /** Select this call and open it in the details dock's 详情 tab. */
-  openDetails?: (() => void) | undefined
 }
 
 /** Full props of a registered atomic Tool view. */
@@ -49,6 +47,3 @@ export type ToolCallViewProps = PropsRuntime<'tool.call.toolview'>
 export type ToolTreeProps = PropsRuntime<'conversation.chat.node', 'tool-call'>
   & PropsRenderSlots<'tool.call.toolview'>
   & PropsLocale<'conversation'>
-
-/** Full props of the selected Tool output renderer in the details panel. */
-export type ToolDetailsProps = PropsRuntime<'conversation.details.tool'> & PropsLocale<'conversation'>

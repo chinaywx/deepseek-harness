@@ -1,109 +1,35 @@
-// DetailsPanel: the details dock occupant. A fixed 详情 tab renders the
-// selected tool call's args and result; studio panels (Design, PPT, …) come
-// from the `details.studio` slot ledger as additional tabs. The active
-// studio panel is a per-session observable shared with the composer command
-// path (`/design`, `/ppt` wake-up); selecting a tool call clears it, which
-// returns the dock to the 详情 tab. With no studio plugin composed in, the
-// dock is just the tool-details panel with its empty guidance.
+// DetailsPanel: the details dock occupant. The dock hosts studio panels
+// (Design, PPT, …) contributed through the `details.studio` slot ledger as
+// tabs; the first panel is the default view. The active panel is a
+// per-session observable shared with the composer command path (`/design`,
+// `/ppt` wake-up). With no studio plugin composed in, the dock shows an
+// empty state — tool-call details intentionally live in the message flow's
+// inline row expansion, not here.
 
-import { Fragment, useState, useSyncExternalStore } from 'react'
-import { CodeBlock } from '@deepseek-ai/dsh-client-ui-primitives'
-import { shallowEqual } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ConversationSnapshot, RunningToolCall, ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-runtime/client'
+import { useState, useSyncExternalStore } from 'react'
 import type { DetailsSlotProps } from '../contract/slots.ts'
-import { findToolCall } from '../chat/tool-node-reader.ts'
 import css from './DetailsPanel.module.css'
 
 /** Full props composed by reference from the contract (automatic shares & injected share). */
 export type DetailsPanelProps = DetailsSlotProps
 
-/**
- * Selected call material: the call's display name and args plus the frozen
- * block slice it came from. `block` is a snapshot-cached reference, so the
- * wrapper stays shallow-equal across unrelated snapshot frames; the settled /
- * running split is read off it with the `'kind' in block` discrimination
- * instead of duplicated as flags.
- */
-interface CallMaterial {
-  name: string
-  argsRaw: string | null
-  block: ToolCallBlock
-}
-
-/** Material of a settled result node (native call or run_code sub-dispatch). */
-function settledMaterial(node: ToolResultNode, callId: string): CallMaterial {
-  return { name: node.call?.name ?? callId, argsRaw: node.call?.argsRaw ?? null, block: node }
-}
-
-/** Material of an in-flight call (native call or run_code sub-dispatch). */
-function runningMaterial(call: RunningToolCall): CallMaterial {
-  return { name: call.name, argsRaw: call.argsRaw, block: call }
-}
-
-function materialFor(s: ConversationSnapshot, callId: string): CallMaterial | null {
-  const found = findToolCall(s, callId)
-  if (found === undefined) return null
-  return 'kind' in found ? settledMaterial(found, callId) : runningMaterial(found)
-}
-
-function pretty(raw: string): string {
-  try {
-    return JSON.stringify(JSON.parse(raw), null, 2)
-  } catch {
-    // Not JSON (streaming fragment or plain text): show verbatim.
-    return raw
-  }
-}
-
-/** Flatten a settled result for the no-ui-tool fallback. */
-function rawResultText(block: ToolCallBlock): string {
-  if (!('kind' in block)) return ''
-  const parts = block.content.map(item => item.type === 'text' ? item.text : JSON.stringify(item, null, 2))
-  if (parts.length === 0 && block.error !== undefined) parts.push(`${block.error.name}: ${block.error.code}`)
-  return parts.join('\n')
-}
-
 export function DetailsPanel({
-  useSession, useSessions, sessionId, useStore, renderSlot,
-  closeDetails, studioViews, setStudio, useStudio, t,
+  renderSlot, closeDetails, studioViews, setStudio, useStudio, t,
 }: DetailsSlotProps) {
   useSyncExternalStore(studioViews.subscribe, studioViews.version)
   const studioTabs = studioViews.list()
   const activeStudioId = useStudio(s => s)
-  // A stale id (plugin composed out) falls back to the tool-details tab.
-  const activeStudio = studioTabs.find(tab => tab.id === activeStudioId)
+  // Default to the first panel; a stale id (plugin composed out) lands there too.
+  const activeStudio = studioTabs.find(tab => tab.id === activeStudioId) ?? studioTabs[0]
   const hasStudio = studioTabs.length > 0
 
-  const selection = useStore(s => s.selection)
-  // Session workspace root: an omitted or relative terminal cwd resolves
-  // against it, which the pure presenter cannot see.
-  const sessionCwd = useSessions(list => list.byId[sessionId]?.cwd)
-  const callId = selection?.callId
-  // materialFor builds a fresh wrapper; shallowEqual short-circuits on its
-  // stable members (result node reference rides the snapshot's structural sharing).
-  const material = useSession(
-    s => (callId === undefined ? null : materialFor(s, callId)),
-    (a, b) => shallowEqual(a, b))
-
   const [refreshKey, setRefreshKey] = useState(0)
-
-  const showStudio = activeStudio !== undefined
 
   return (
     <div className={css.root}>
       <div className={css.header}>
         {hasStudio ? (
           <div className={css.tabs} role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!showStudio}
-              className={css.tab}
-              data-active={!showStudio || undefined}
-              onClick={() => { setStudio(null) }}
-            >
-              {t('details.title')}
-            </button>
             {studioTabs.map(tab => (
               <button
                 key={tab.id}
@@ -119,12 +45,10 @@ export function DetailsPanel({
             ))}
           </div>
         ) : (
-          <div className={css.title}>
-            {selection === null ? t('details.title') : material?.name ?? selection.toolName ?? t('details.title')}
-          </div>
+          <div className={css.title}>{t('details.panels')}</div>
         )}
         <div className={css.headerActions}>
-          {showStudio && (
+          {activeStudio !== undefined && (
             <button
               type="button"
               className={css.refresh}
@@ -154,44 +78,13 @@ export function DetailsPanel({
         </div>
       </div>
       <div className={css.body}>
-        {showStudio
+        {activeStudio !== undefined
           ? (
             <div className={css.studioBody}>
               {renderSlot('details.studio', { refreshKey }, { only: activeStudio.id })}
             </div>
           )
-          : selection === null || callId === undefined
-            ? <div className={css.empty}>{t('details.empty')}</div>
-            : material === null
-              ? <div className={css.empty}>{t('details.notInWindow')}</div>
-              : (
-                <>
-                  {material.argsRaw !== null && (
-                    <section className={css.section}>
-                      <div className={css.sectionLabel}>{t('details.input')}</div>
-                      <CodeBlock code={pretty(material.argsRaw)} lang="json" copyLabel={t('copy')} copiedLabel={t('copied')} />
-                    </section>
-                  )}
-                  <section className={css.section}>
-                    <div className={css.sectionLabel}>{t('details.output')}</div>
-                    {/* Keyed by the selected call: the body owns per-call view
-                        state (the terminal card's expand and copy), which React
-                        would otherwise carry into the next selection because the
-                        panel does not unmount between calls. */}
-                    <Fragment key={callId}>
-                      {renderSlot('conversation.details.tool', { block: material.block, cwd: sessionCwd }, {
-                        fallback: 'kind' in material.block
-                          ? (
-                            <pre className={css.code} data-error={material.block.isError || undefined}>
-                              {rawResultText(material.block)}
-                            </pre>
-                          )
-                          : <div className={css.empty}>{t('details.running')}</div>,
-                      })}
-                    </Fragment>
-                  </section>
-                </>
-              )}
+          : <div className={css.empty}>{t('details.noPanels')}</div>}
       </div>
     </div>
   )

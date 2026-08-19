@@ -99,11 +99,6 @@ export interface ToolRowProps {
    * over the expanded body. Absent = no affordance.
    */
   inspect?: (() => void) | undefined
-  /**
-   * Select this call and open it in the details dock's 详情 tab; fired with
-   * the row's expand toggle (the details panel's guidance copy promises it).
-   */
-  openDetails?: (() => void) | undefined
 }
 
 /** Leading-slot state substitution: the tool icon yields to the terminal state
@@ -150,7 +145,6 @@ export function ToolRow({
   filePath,
   onOpenFile,
   inspect,
-  openDetails,
 }: ToolRowProps) {
   const [expanded, setExpanded] = useState(false)
   const terminalBody = terminal ?? null
@@ -179,9 +173,6 @@ export function ToolRow({
   const fileLink = filePath !== undefined && onOpenFile !== undefined && failureLine === null
   const toggleExpand = () => {
     setExpanded(v => !v)
-    // Row activation also selects the call into the details dock (the panel's
-    // empty-state copy sends users here).
-    openDetails?.()
   }
   const openFile = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()

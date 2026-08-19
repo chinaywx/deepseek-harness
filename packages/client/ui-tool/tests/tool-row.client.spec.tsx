@@ -429,13 +429,6 @@ describe('GenericToolCard', () => {
     expect(inspect).toHaveBeenCalledTimes(1)
   })
 
-  it('row activation fires the owner openDetails callback (details dock linkage)', () => {
-    const openDetails = vi.fn()
-    const view = render(<GenericToolCard {...props('bash', result())} openDetails={openDetails} />)
-    fireEvent.click(view.getByRole('button', { name: /Bash/ }))
-    expect(openDetails).toHaveBeenCalledTimes(1)
-  })
-
   it('file-path summary click reaches openFile; bash summary does not', () => {
     const file = props('read', running({ name: 'read', argsRaw: '{"path":"src/x.ts"}' }))
     const fileView = render(<GenericToolCard {...file} />)

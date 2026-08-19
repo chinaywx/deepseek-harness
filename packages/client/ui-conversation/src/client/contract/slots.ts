@@ -7,7 +7,7 @@ import type {
 } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   CommandNode, CompactionSummaryNode, ConversationSnapshot, ConversationTurnDataMap,
-  ObservableSnapshot, PendingInteraction, PendingWait, SessionId, ToolCallBlock,
+  ObservableSnapshot, PendingInteraction, PendingWait, SessionId,
   TurnLocation, WorkspaceId,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -118,17 +118,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * session with no studio plugin shows the dock's plain details state.
      */
     'details.studio': { kind: 'list'; scope: 'session'; owner: DetailsStudioOwnerProps }
-    /**
-     * The body of the details panel for the tool call the user selected —
-     * one occupant, so taking it means rendering every tool's output, not just
-     * the ones you know. The owner passes a frozen `block` whose two lifecycle
-     * forms must both be handled: branch on `'kind' in block` (a settled
-     * `ToolResultNode` has it, a still-running call does not), and treat
-     * `cwd` as display-only, for shortening workspace-rooted paths.
-     * A per-tool renderer belongs in the keyed `tool.call.toolview` seat
-     * instead; this one is the whole panel.
-     */
-    'conversation.details.tool': { kind: 'single'; scope: 'session'; owner: DetailsToolOwnerProps }
     /**
      * The composer takeover chain: entries are selector-routed replacements
      * of the default InputBar. Declared by this package's 'conversation'
@@ -367,8 +356,6 @@ export interface ChatNodeOwnerProps {
   cwd?: string | undefined
   openFile: (path: string) => void
   inspectCall: (callId: CallId) => void
-  /** Select a Tool call and open it in the details dock's 详情 tab. */
-  openCallDetails: (callId: CallId, toolName: string) => void
   forkAt: (seq: number) => void
   /** Resolve a session-authorized historical image for inline display. */
   loadImage: (attachment: ImageAttachmentRef) => Promise<string>
@@ -378,14 +365,6 @@ export interface ChatNodeOwnerProps {
 /** Full props of one registered keyed Chat business renderer. */
 export type ChatNodeViewProps<Kind extends ChatNodeKind = ChatNodeKind> =
   PropsRuntime<'conversation.chat.node', Kind> & PropsLocale<'conversation'>
-
-/** Owner currency of the details panel's Tool output renderer. */
-export interface DetailsToolOwnerProps {
-  /** Frozen selected call slice. */
-  block: ToolCallBlock
-  /** Session workspace root for card cwd and relative-path display. */
-  cwd?: string | undefined
-}
 
 /**
  * Owner share of the per-command row slot: the frozen {@link CommandNode}
@@ -760,9 +739,9 @@ export interface DetailsInjected {
   }
 }
 
-/** Full details-slot props: selection store, Tool output seat, studio panel seat, injected share (hooks bound), and locale. */
-export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'conversation.details.tool' | 'details.studio'>
-  & PropsStore<ChatStore> & InjectFace<DetailsInjected> & PropsLocale<'conversation'>
+/** Full details-slot props: studio panel seat, injected share (hooks bound), and locale. */
+export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'details.studio'>
+  & InjectFace<DetailsInjected> & PropsLocale<'conversation'>
 
 /** Injected share of the header details-dock toggle: a pure layout opener. */
 export interface DetailsToggleInjected {

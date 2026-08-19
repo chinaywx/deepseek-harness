@@ -82,11 +82,12 @@ describe('apply wiring', () => {
     expect(conversation?.inject).toBeTypeOf('function')
     expect(chatView?.inject).toBeTypeOf('function')
     expect(details?.inject).toBeTypeOf('function')
-    // The shared handle: one apply-built store value on ALL session entries
-    // (the session-maybe 'conversation' shell carries no store by design).
+    // The shared handle: one apply-built store value on the session entries
+    // (the session-maybe 'conversation' shell and the studio-only details
+    // dock carry no store by design).
     expect(conversationSession?.store).toBeDefined()
     expect(conversationHeader?.store).toBe(conversationSession?.store)
-    expect(details?.store).toBe(conversationSession?.store)
+    expect(details?.store).toBeUndefined()
     expect(chatView?.store).toBe(conversationSession?.store)
     // The hero holes ride the conversation entry's children declaration (the
     // empty-state occupant is gone). Both are root-scoped: the new-session
