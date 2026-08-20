@@ -3,6 +3,7 @@
 // dock stays reachable — showing its empty details state — even when no
 // studio plugin is composed in.
 
+import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DetailsToggleInjected } from '../contract/slots.ts'
 import css from './DetailsToggle.module.css'
@@ -18,17 +19,18 @@ export function DetailsToggleButton({ openDetails, useDetailsOpen, t }: DetailsT
   const open = useDetailsOpen(s => s)
   if (open) return null
   return (
-    <button
-      type="button"
-      className={css.toggle}
-      aria-label={t('details.open')}
-      title={t('details.open')}
-      onClick={() => { openDetails() }}
-    >
-      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-        <rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="1.3" />
-        <path d="M10 2.5v11" stroke="currentColor" strokeWidth="1.3" />
-      </svg>
-    </button>
+    <Tooltip label={t('details.open')} side="bottom">
+      <button
+        type="button"
+        className={css.toggle}
+        aria-label={t('details.open')}
+        onClick={() => { openDetails() }}
+      >
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+          <rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <path d="M10 2.5v11" stroke="currentColor" strokeWidth="1.3" />
+        </svg>
+      </button>
+    </Tooltip>
   )
 }

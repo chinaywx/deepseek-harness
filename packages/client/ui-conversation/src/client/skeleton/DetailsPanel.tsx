@@ -8,6 +8,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import clsx from 'clsx'
+import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DetailsSlotProps } from '../contract/slots.ts'
 import css from './DetailsPanel.module.css'
 
@@ -67,55 +68,61 @@ export function DetailsPanel({
         <div className={css.headerActions}>
           {activeStudio !== undefined && (
             <>
-              <button
-                type="button"
-                className={css.refresh}
-                aria-label={t('details.refresh')}
-                onClick={() => { setRefreshKey(k => k + 1) }}
-              >
-                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
-                  <path
-                    d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 4.5V8h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-              <button
-                type="button"
-                className={css.refresh}
-                aria-label={t(fullscreen ? 'details.exitFullscreen' : 'details.fullscreen')}
-                onClick={() => { setFullscreen(v => !v) }}
-              >
-                {fullscreen ? (
+              <Tooltip label={t('details.refresh')} side="bottom">
+                <button
+                  type="button"
+                  className={css.refresh}
+                  aria-label={t('details.refresh')}
+                  onClick={() => { setRefreshKey(k => k + 1) }}
+                >
                   <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
                     <path
-                      d="M6 6H3.5M6 6V3.5M10 10h2.5M10 10v2.5"
-                      fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                      d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 4.5V8h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                   </svg>
-                ) : (
-                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
-                    <path
-                      d="M6 3.5V6H3.5M10 12.5V10h2.5"
-                      fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </button>
+                </button>
+              </Tooltip>
+              <Tooltip label={t(fullscreen ? 'details.exitFullscreen' : 'details.fullscreen')} side="bottom">
+                <button
+                  type="button"
+                  className={css.refresh}
+                  aria-label={t(fullscreen ? 'details.exitFullscreen' : 'details.fullscreen')}
+                  onClick={() => { setFullscreen(v => !v) }}
+                >
+                  {fullscreen ? (
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+                      <path
+                        d="M6 6H3.5M6 6V3.5M10 10h2.5M10 10v2.5"
+                        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+                      <path
+                        d="M6 3.5V6H3.5M10 12.5V10h2.5"
+                        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </Tooltip>
             </>
           )}
-          <button
-            type="button" className={css.close} aria-label={t('details.close')}
-            onClick={() => { setFullscreen(false); closeDetails() }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
-              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
+          <Tooltip label={t('details.close')} side="bottom">
+            <button
+              type="button" className={css.close} aria-label={t('details.close')}
+              onClick={() => { setFullscreen(false); closeDetails() }}
+            >
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+                <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </Tooltip>
         </div>
       </div>
       <div className={css.body}>
